@@ -6,7 +6,7 @@ void getMessageB(){
     printf("Now message is: \n%s", dataB);
     if(ftruncate(fileno(file), 0) != 0) { // 使用ftruncate函数清空文件数据
         printf("无法清空文件\n");
-        return 1;
+        exit(-1);
     }
 }
 
@@ -47,14 +47,14 @@ void clearMessage(){
     FILE *file = fopen("MessageA.txt", "a+");
     if(ftruncate(fileno(file), 0) != 0){
         printf("Clear message error");
-        return -1;
+        exit(-1);
     }
 }
 
 void cancleMessagB(){
     if(shmctl(shmidB, IPC_RMID, NULL) == -1){
         printf("Cancle message error");
-        return -1;
+        exit(-1);
     }
 }
 

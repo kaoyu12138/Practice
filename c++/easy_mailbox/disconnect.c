@@ -10,6 +10,7 @@ void disconnectA(){
     semctl(emptyA, 0, IPC_RMID);
 }
 
+
 void disconnectB(){
     shmdt(shm_addrB);
     int sh = shmctl(shmidB, IPC_RMID, NULL);

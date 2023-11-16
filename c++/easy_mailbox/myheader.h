@@ -9,6 +9,7 @@
 #include<sys/ipc.h>
 #include<sys/types.h>
 #include<sys/sem.h>
+#include<stdlib.h>
 
 #define bufsize 4096
 union semun {
@@ -34,7 +35,7 @@ FILE *file;
 //创建内存共享区A作为进程A的信箱，并创建三个信号量
 void CreateA(){
     //创建一片大小为4096的共享内存区A，作为信箱A，key值为ftok("/home",0x111)
-    keyA = ftok("/home", 0x100);
+    keyA = ftok("/home", 0x111);
     shmidA = shmget(keyA, bufsize, IPC_CREAT | 0600);
     if(shmidA == -1){
         printf("shmget error");
@@ -42,9 +43,9 @@ void CreateA(){
     shm_addrA = shmat(shmidA, NULL, 0);
 
     //创建三个信号量集，分别用作互斥信号量、资源信号量full、资源信号量empty
-    keymutexA = ftok("/home", 0x110);
-    keyfullA = ftok("/home", 0x120);
-    keyemptyA = ftok("/home", 0x130);
+    keymutexA = ftok("/home/pinoky", 0x222);
+    keyfullA = ftok("/home/pinoky", 0x333);
+    keyemptyA = ftok("/home/pinoky", 0x444);
     
     mutexA = semget(keymutexA, 1, IPC_CREAT | 0666);
     fullA = semget(keyfullA, 1, IPC_CREAT | 0666);
@@ -59,22 +60,22 @@ void CreateB(){
     }
     shm_addrB = shmat(shmidB, NULL, 0);
 
-    keymutexB = ftok("/home", 0x210);
-    keyfullB = ftok("/home", 0x220);
-    keyemptyB = ftok("/home", 0x230);
+    keymutexB = ftok("/home/pinoky", 0x555);
+    keyfullB = ftok("/home/pinoky", 0x666);
+    keyemptyB = ftok("/home/pinoky", 0x888);
 
-    mutexB = semget(keymutexA, 1, IPC_CREAT | 0666);
-    fullB = semget(keyfullA, 1, IPC_CREAT | 0666);
-    emptyB = semget(keyemptyA, 1, IPC_CREAT | 0666);
+    mutexB = semget(keymutexB, 1, IPC_CREAT | 0666);
+    fullB = semget(keyfullB, 1, IPC_CREAT | 0666);
+    emptyB = semget(keyemptyB, 1, IPC_CREAT | 0666);
 }
 
 //获取进程A暂存信息的大小
 int getMessageSizeA(){
-    return sizeof(dataA);
+    return strlen(dataA);
 }
 
 int getMessageSizeB(){
-    return sizeof(dataB);
+    return strlen(dataB);
 }
 
 //获取信箱A内数据量的大小
@@ -100,37 +101,38 @@ void LockA(){
     sb.sem_num = 0;
     sb.sem_op = -1;
     sb.sem_flg = 0;
-    semop(keymutexA, &sb, 1);
+    semop(mutexA, &sb, 1);
 }
 
 void UnlockA(){
     sb.sem_num = 0;
     sb.sem_op = 1;
     sb.sem_flg = 0;
-    semop(keymutexA, &sb, 1);
+    semop(mutexA, &sb, 1);
 }
 
 void LockB(){
     sb.sem_num = 0;
     sb.sem_op = -1;
     sb.sem_flg = 0;
-    semop(keymutexB, &sb, 1);
+    semop(mutexB, &sb, 1);
 }
 
 void UnlockB(){
     sb.sem_num = 0;
     sb.sem_op = 1;
     sb.sem_flg = 0;
-    semop(keymutexB, &sb, 1);
+    semop(mutexB, &sb, 1);
 }
 
 void semWaitEmptyA(){
     sb.sem_num = 0;
-    sb.sem_op = getMessageSizeA()*-1;
+    sb.sem_op = -1*getMessageSizeA();
     sb.sem_flg = IPC_NOWAIT;
-    if(semop(keyemptyA, &sb, 1)==-1){
+    if(semop(emptyA, &sb, 1)==-1){
         if(errno == EAGAIN){
             printf("The space is full, send error, Please retry later!");
+            exit(-1);
         }
     }
 }
@@ -139,16 +141,17 @@ void semPostEmptyA(){
     sb.sem_num = 0;
     sb.sem_op = getSpaceSizeA();
     sb.sem_flg = 0;
-    semop(keyemptyB, &sb, 1);
+    semop(emptyA, &sb, 1);
 }
 
 void semWaitEmptyB(){
     sb.sem_num = 0;
     sb.sem_op = getMessageSizeB()*-1;
     sb.sem_flg = IPC_NOWAIT;
-    if(semop(keyemptyB, &sb, 1)==-1){
+    if(semop(emptyB, &sb, 1)==-1){
         if(errno == EAGAIN){
             printf("The space is full, send error, Please retry later!");
+            exit(-1);
         }
     }
 }
@@ -157,7 +160,7 @@ void semPostEmptyB(){
     sb.sem_num = 0;
     sb.sem_op = getSpaceSizeB();
     sb.sem_flg = 0;
-    semop(keyemptyB, &sb, 1);
+    semop(emptyB, &sb, 1);
 }
 
 
@@ -165,9 +168,10 @@ void semWaitFullA(){
     sb.sem_num = 0;
     sb.sem_op = -1;
     sb.sem_flg = IPC_NOWAIT;
-    if(semop(keyfullA, &sb, 1)==-1){
+    if(semop(fullA, &sb, 1)==-1){
         if(errno == EAGAIN){
             printf("The space is empty, receive error, Please retry later!");
+            exit(-1);
         }
     }
 }
@@ -176,16 +180,17 @@ void semPostFullA(){
     sb.sem_num = 0;
     sb.sem_op = 1;
     sb.sem_flg = 0;
-    semop(keyfullA, &sb, 1);
+    semop(fullA, &sb, 1);
 }
 
 void semWaitFullB(){
     sb.sem_num = 0;
     sb.sem_op = -1;
     sb.sem_flg = IPC_NOWAIT;
-    if(semop(keyfullB, &sb, 1)==-1){
+    if(semop(fullB, &sb, 1)==-1){
         if(errno == EAGAIN){
             printf("The space is empty, receive error, Please retry later!");
+            exit(-1);
         }
     }
 }
@@ -194,7 +199,7 @@ void semPostFullB(){
     sb.sem_num = 0;
     sb.sem_op = 1;
     sb.sem_flg = 0;
-    semop(keyfullB, &sb, 1);
+    semop(fullB, &sb, 1);
 }
 
 #endif
