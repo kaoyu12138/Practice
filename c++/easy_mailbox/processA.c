@@ -57,7 +57,7 @@ void clearMessage(){
 }
 
 //用于清空共享内存区A中的数据，即撤销消息
-void cancleMessagA(){
+void cancelMessagA(){
     if(shmctl(shmidA, IPC_RMID, NULL) == -1){
         printf("Cancle message error");
         exit(-1);
@@ -79,7 +79,7 @@ int main(int argc, char *argv[]){
     else if(strcmp(argv[1], "send") == 0) sendMessage();
     else if(strcmp(argv[1], "clear") == 0) clearMessage();
     else if(strcmp(argv[1], "receive") == 0) receiveMessage();
-    else if(strcmp(argv[1], "cancle") == 0) cancleMessagA();
+    else if(strcmp(argv[1], "cancel") == 0) cancelMessagA();
     else{
         printf("wrong command!");
         return -1;

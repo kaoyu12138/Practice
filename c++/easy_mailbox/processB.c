@@ -44,18 +44,19 @@ void receiveMessage(){
 }
 
 void clearMessage(){
-    FILE *file = fopen("MessageA.txt", "a+");
+    FILE *file = fopen("MessageB.txt", "a+");
     if(ftruncate(fileno(file), 0) != 0){
         printf("Clear message error");
         exit(-1);
     }
 }
 
-void cancleMessagB(){
+void cancelMessagB(){
     if(shmctl(shmidB, IPC_RMID, NULL) == -1){
         printf("Cancle message error");
         exit(-1);
     }
+    semWaitFullB();
 }
 
 int main(int argc, char *argv[]){
@@ -72,7 +73,7 @@ int main(int argc, char *argv[]){
     else if(strcmp(argv[1], "send") == 0) sendMessage();
     else if(strcmp(argv[1], "clear") == 0) clearMessage();
     else if(strcmp(argv[1], "receive") == 0) receiveMessage();
-    else if(strcmp(argv[1], "cancle") == 0) cancleMessagB();
+    else if(strcmp(argv[1], "cancel") == 0) cancelMessagB();
     else{
         printf("wrong command!");
         return -1;
